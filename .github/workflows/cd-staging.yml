@@ -1,0 +1,92 @@
+name: CD — Staging
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/envvault
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [auth-service, secrets-service, audit-service, billing-service, notification-service, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service == 'frontend' && 'frontend' || format('services/{0}', matrix.service) }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:staging-latest
+
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x /usr/local/bin/argocd
+
+      - name: Update Helm values with new image tags
+        run: |
+          sed -i "s/tag: .*/tag: ${{ github.sha }}/" infra/helm/envvault/values.staging.yaml
+
+      - name: Deploy via ArgoCD
+        run: |
+          argocd login ${{ secrets.ARGOCD_SERVER }} \
+            --username ${{ secrets.ARGOCD_USERNAME }} \
+            --password ${{ secrets.ARGOCD_PASSWORD }} \
+            --insecure
+          argocd app sync envvault-staging --timeout 180
+          argocd app wait envvault-staging --health --timeout 300
+
+  integration-test-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install pytest requests
+
+      - name: Run smoke tests against staging
+        run: pytest tests/smoke/ --base-url=https://staging.envvault.io -v
+        env:
+          STAGING_API_KEY: ${{ secrets.STAGING_API_KEY }}
+        continue-on-error: true
+
+      - name: OWASP ZAP DAST scan
+        uses: zaproxy/action-api-scan@v0.7.0
+        with:
+          target: https://staging.envvault.io/api/v1/
+          format: openapi
+        continue-on-error: true

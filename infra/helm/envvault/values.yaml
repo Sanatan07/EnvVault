@@ -1,0 +1,113 @@
+global:
+  imageRegistry: ghcr.io/your-org
+  imagePullPolicy: IfNotPresent
+
+authService:
+  image:
+    repository: envvault-auth-service
+    tag: latest
+  replicas: 2
+  port: 8001
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+secretsService:
+  image:
+    repository: envvault-secrets-service
+    tag: latest
+  replicas: 3
+  port: 8002
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+auditService:
+  image:
+    repository: envvault-audit-service
+    tag: latest
+  replicas: 2
+  port: 8003
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 400m
+      memory: 512Mi
+
+billingService:
+  image:
+    repository: envvault-billing-service
+    tag: latest
+  replicas: 1
+  port: 8004
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+notificationService:
+  image:
+    repository: envvault-notification-service
+    tag: latest
+  replicas: 1
+  celeryWorkers: 2
+  port: 8005
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+frontend:
+  image:
+    repository: envvault-frontend
+    tag: latest
+  replicas: 2
+  port: 3000
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      cpu: 400m
+      memory: 512Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.envvault.io
+  tls:
+    enabled: true
+    secretName: envvault-tls
+    issuer: letsencrypt-prod
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: changeme
+  databases:
+    - auth_db
+    - secrets_db
+    - audit_db
+    - billing_db
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: changeme

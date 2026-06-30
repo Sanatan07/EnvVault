@@ -1,0 +1,273 @@
+version: "3.9"
+
+services:
+  # ── Databases ────────────────────────────────────────────────────────────────
+  postgres-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: envvault
+      POSTGRES_PASSWORD: envvault_secret
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U envvault -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-secrets:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: secrets_db
+      POSTGRES_USER: envvault
+      POSTGRES_PASSWORD: envvault_secret
+    volumes:
+      - postgres_secrets_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U envvault -d secrets_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-audit:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: audit_db
+      POSTGRES_USER: envvault
+      POSTGRES_PASSWORD: envvault_secret
+    volumes:
+      - postgres_audit_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U envvault -d audit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-billing:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: billing_db
+      POSTGRES_USER: envvault
+      POSTGRES_PASSWORD: envvault_secret
+    volumes:
+      - postgres_billing_data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U envvault -d billing_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass envvault_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "envvault_redis", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Services ──────────────────────────────────────────────────────────────────
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://envvault:envvault_secret@postgres-auth:5432/auth_db
+      - REDIS_URL=redis://:envvault_redis@redis:6379/0
+    env_file:
+      - ./services/auth-service/.env
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/auth-service:/app
+    command: python manage.py runserver 0.0.0.0:8001
+
+  secrets-service:
+    build:
+      context: ./services/secrets-service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://envvault:envvault_secret@postgres-secrets:5432/secrets_db
+      - REDIS_URL=redis://:envvault_redis@redis:6379/1
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - AUDIT_SERVICE_URL=http://audit-service:8003
+      - BILLING_SERVICE_URL=http://billing-service:8004
+    env_file:
+      - ./services/secrets-service/.env
+    depends_on:
+      postgres-secrets:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/secrets-service:/app
+    command: python manage.py runserver 0.0.0.0:8002
+
+  audit-service:
+    build:
+      context: ./services/audit-service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://envvault:envvault_secret@postgres-audit:5432/audit_db
+      - REDIS_URL=redis://:envvault_redis@redis:6379/2
+    env_file:
+      - ./services/audit-service/.env
+    depends_on:
+      postgres-audit:
+        condition: service_healthy
+    volumes:
+      - ./services/audit-service:/app
+    command: python manage.py runserver 0.0.0.0:8003
+
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://envvault:envvault_secret@postgres-billing:5432/billing_db
+      - REDIS_URL=redis://:envvault_redis@redis:6379/3
+    env_file:
+      - ./services/billing-service/.env
+    depends_on:
+      postgres-billing:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/billing-service:/app
+    command: python manage.py runserver 0.0.0.0:8004
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - REDIS_URL=redis://:envvault_redis@redis:6379/4
+    env_file:
+      - ./services/notification-service/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/notification-service:/app
+    command: python manage.py runserver 0.0.0.0:8005
+
+  notification-worker:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - REDIS_URL=redis://:envvault_redis@redis:6379/4
+    env_file:
+      - ./services/notification-service/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/notification-service:/app
+    command: celery -A config worker -l info --concurrency=2
+
+  billing-worker:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - DATABASE_URL=postgresql://envvault:envvault_secret@postgres-billing:5432/billing_db
+      - REDIS_URL=redis://:envvault_redis@redis:6379/3
+    env_file:
+      - ./services/billing-service/.env
+    depends_on:
+      postgres-billing:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/billing-service:/app
+    command: celery -A config worker -l info --concurrency=2
+
+  celery-beat:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - REDIS_URL=redis://:envvault_redis@redis:6379/4
+    env_file:
+      - ./services/notification-service/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/notification-service:/app
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+      - NEXTAUTH_URL=http://localhost:3000
+    env_file:
+      - ./frontend/.env.local
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+  # ── API Gateway (Nginx) ───────────────────────────────────────────────────────
+  api-gateway:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - secrets-service
+      - audit-service
+      - billing-service
+      - notification-service
+
+volumes:
+  postgres_auth_data:
+  postgres_secrets_data:
+  postgres_audit_data:
+  postgres_billing_data:
+  redis_data:

@@ -1,0 +1,38 @@
+global:
+  imageRegistry: ghcr.io/your-org
+
+authService:
+  replicas: 2
+  image:
+    tag: latest
+
+secretsService:
+  replicas: 3
+  image:
+    tag: latest
+
+auditService:
+  replicas: 2
+  image:
+    tag: latest
+
+billingService:
+  replicas: 1
+  image:
+    tag: latest
+
+notificationService:
+  replicas: 1
+  celeryWorkers: 2
+  image:
+    tag: latest
+
+frontend:
+  replicas: 2
+  image:
+    tag: latest
+
+ingress:
+  host: app.envvault.io
+  tls:
+    secretName: envvault-tls

@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth-service, secrets-service, audit-service, billing-service, notification-service]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.service }}-${{ hashFiles(format('services/{0}/requirements.txt', matrix.service)) }}
+
+      - name: Install dependencies
+        run: pip install -r services/${{ matrix.service }}/requirements.txt
+
+      - name: Run tests
+        run: |
+          cd services/${{ matrix.service }}
+          pytest --tb=short --cov=. --cov-report=xml
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DATABASE_URL: sqlite:///test.db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
+          INTERNAL_SERVICE_TOKEN: ci-internal-token
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: services/${{ matrix.service }}/coverage.xml
+          flags: ${{ matrix.service }}
+        continue-on-error: true
+
+      - name: Bandit SAST
+        run: bandit -r services/${{ matrix.service }} -ll -x tests/ --exit-zero
+
+      - name: Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/django p/secrets p/owasp-top-ten
+        continue-on-error: true
+
+      - name: pip-audit dependency scan
+        run: pip-audit -r services/${{ matrix.service }}/requirements.txt || true
+
+      - name: Build Docker image
+        run: docker build -t envvault-${{ matrix.service }}:${{ github.sha }} services/${{ matrix.service }}/
+
+      - name: Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: envvault-${{ matrix.service }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: 1
+        continue-on-error: false
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  lint-iac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run checkov on K8s manifests
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra/k8s
+          framework: kubernetes
+          quiet: true
+          soft_fail: true

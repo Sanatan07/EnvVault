@@ -1,0 +1,38 @@
+global:
+  imageRegistry: ghcr.io/your-org
+
+authService:
+  replicas: 1
+  image:
+    tag: staging-latest
+
+secretsService:
+  replicas: 1
+  image:
+    tag: staging-latest
+
+auditService:
+  replicas: 1
+  image:
+    tag: staging-latest
+
+billingService:
+  replicas: 1
+  image:
+    tag: staging-latest
+
+notificationService:
+  replicas: 1
+  celeryWorkers: 1
+  image:
+    tag: staging-latest
+
+frontend:
+  replicas: 1
+  image:
+    tag: staging-latest
+
+ingress:
+  host: staging.envvault.io
+  tls:
+    secretName: envvault-staging-tls

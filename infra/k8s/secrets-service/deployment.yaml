@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secrets-service
+  namespace: envvault-production
+  labels:
+    app: secrets-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: secrets-service
+  template:
+    metadata:
+      labels:
+        app: secrets-service
+    spec:
+      containers:
+        - name: secrets-service
+          image: ghcr.io/your-org/envvault-secrets-service:latest
+          ports:
+            - containerPort: 8002
+          envFrom:
+            - secretRef:
+                name: secrets-service-env
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 8002
+            initialDelaySeconds: 30
+            periodSeconds: 15
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: secrets-service-hpa
+  namespace: envvault-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: secrets-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secrets-service
+  namespace: envvault-production
+spec:
+  selector:
+    app: secrets-service
+  ports:
+    - port: 8002
+      targetPort: 8002
+  type: ClusterIP
