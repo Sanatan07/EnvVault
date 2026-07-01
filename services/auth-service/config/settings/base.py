@@ -1,14 +1,16 @@
 from datetime import timedelta
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import dj_database_url
+# pyrefly: ignore [missing-import]
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = config("DJANGO_SECRET_KEY")
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = ["*"] if DEBUG else config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -154,3 +156,14 @@ CORS_ALLOWED_ORIGINS = config(
     default="http://localhost:3000,http://127.0.0.1:3000",
 ).split(",")
 CORS_ALLOW_CREDENTIALS = True
+
+# Email settings
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="sanatantest07@gmail.com")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="EnvVault <sanatantest07@gmail.com>")
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
+

@@ -20,6 +20,7 @@ class BillingAccount(models.Model):
     stripe_customer_id = models.CharField(max_length=255, blank=True)
     stripe_subscription_id = models.CharField(max_length=255, blank=True)
     plan = models.CharField(max_length=50, default=PLAN_FREE)
+    block_reads_at_limit = models.BooleanField(default=False)
     billing_period_start = models.DateTimeField(null=True)
     billing_period_end = models.DateTimeField(null=True)
 

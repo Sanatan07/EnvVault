@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -14,11 +14,11 @@ import { orgsApi, projectsApi } from "@/lib/api";
 import { toast } from "sonner";
 
 interface PageProps {
-  params: Promise<{ org_slug: string; project_slug: string }>;
+  params: { org_slug: string; project_slug: string };
 }
 
 export default function ProjectSettingsPage({ params }: PageProps) {
-  const { org_slug, project_slug } = use(params);
+  const { org_slug, project_slug } = params;
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -57,7 +57,7 @@ export default function ProjectSettingsPage({ params }: PageProps) {
       <Sidebar orgSlug={org_slug} projectSlug={project_slug} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title={`${project?.name ?? ""} — Settings`} />
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 max-w-2xl">
+        <main className="flex-1 overflow-auto min-w-0 p-6 space-y-6 max-w-2xl">
           <Card>
             <CardHeader><CardTitle>Project Details</CardTitle></CardHeader>
             <CardContent className="space-y-4">

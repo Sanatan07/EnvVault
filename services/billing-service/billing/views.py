@@ -48,6 +48,29 @@ class UsageView(APIView):
             "current_period": UsageCounterSerializer(counter).data,
         })
 
+    def put(self, request, org_id):
+        from datetime import timedelta
+        account, _ = BillingAccount.objects.get_or_create(org_id=org_id)
+        block_reads = request.data.get("block_reads_at_limit")
+        if block_reads is not None:
+            account.block_reads_at_limit = bool(block_reads)
+            account.save(update_fields=["block_reads_at_limit"])
+        
+        now = timezone.now()
+        period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        counter, _ = UsageCounter.objects.get_or_create(
+            org_id=org_id,
+            period_start=period_start,
+            defaults={
+                "period_end": (period_start + timedelta(days=32)).replace(day=1) - timedelta(seconds=1),
+                "secret_reads": 0,
+            },
+        )
+        return Response({
+            "account": BillingAccountSerializer(account).data,
+            "current_period": UsageCounterSerializer(counter).data,
+        })
+
 
 class InternalIncrementView(APIView):
     def post(self, request):

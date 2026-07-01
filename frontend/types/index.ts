@@ -16,8 +16,8 @@ export interface Organisation {
 
 export interface Member {
   id: string;
-  user: User;
-  organisation: string;
+  email: string;
+  full_name?: string;
   role: "owner" | "admin" | "editor" | "viewer";
   created_at: string;
 }
@@ -45,6 +45,7 @@ export interface Secret {
   key: string;
   current_version: number;
   is_deleted: boolean;
+  needs_rotation?: boolean;
   created_at: string;
   updated_at: string;
 }

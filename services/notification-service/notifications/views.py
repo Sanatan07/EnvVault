@@ -54,6 +54,9 @@ class InternalTriggerView(APIView):
         elif event_type == "invoice":
             from .tasks import send_invoice_email
             send_invoice_email.delay(**payload)
+        elif event_type == "billing_alert":
+            from .tasks import send_billing_alert
+            send_billing_alert.delay(**payload)
         else:
             return Response({"detail": "Unknown event type."}, status=status.HTTP_400_BAD_REQUEST)
 

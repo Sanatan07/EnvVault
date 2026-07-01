@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from django.urls import path
 from .views import (
     EnvironmentListCreateView,
@@ -8,6 +9,7 @@ from .views import (
     SecretRollbackView,
     ImportEnvView,
     ExportEnvView,
+    SecretPromoteView,
 )
 
 urlpatterns = [
@@ -16,6 +18,8 @@ urlpatterns = [
     path("<uuid:project_id>/environments/<uuid:env_id>/", EnvironmentDestroyView.as_view(), name="env-destroy"),
     # Secrets CRUD
     path("<uuid:project_id>/<str:env>/", SecretListCreateView.as_view(), name="secret-list"),
+    path("<uuid:project_id>/<str:env>/import/", ImportEnvView.as_view(), name="secret-import"),
+    path("<uuid:project_id>/<str:env>/export/", ExportEnvView.as_view(), name="secret-export"),
     path("<uuid:project_id>/<str:env>/<str:key>/", SecretDetailView.as_view(), name="secret-detail"),
     # Versions & rollback
     path("<uuid:project_id>/<str:env>/<str:key>/versions/", SecretVersionListView.as_view(), name="secret-versions"),
@@ -24,7 +28,6 @@ urlpatterns = [
         SecretRollbackView.as_view(),
         name="secret-rollback",
     ),
-    # Import / Export
-    path("<uuid:project_id>/<str:env>/import/", ImportEnvView.as_view(), name="secret-import"),
-    path("<uuid:project_id>/<str:env>/export/", ExportEnvView.as_view(), name="secret-export"),
+    # Promotion
+    path("<uuid:project_id>/promote/", SecretPromoteView.as_view(), name="secret-promote"),
 ]

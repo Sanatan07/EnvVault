@@ -1,5 +1,4 @@
 "use client";
-import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,11 +11,11 @@ import { useImportSecrets } from "@/hooks/useSecrets";
 import { toast } from "sonner";
 
 interface PageProps {
-  params: Promise<{ org_slug: string; project_slug: string; env: string }>;
+  params: { org_slug: string; project_slug: string; env: string };
 }
 
 export default function ImportPage({ params }: PageProps) {
-  const { org_slug, project_slug, env } = use(params);
+  const { org_slug, project_slug, env } = params;
   const router = useRouter();
   const [content, setContent] = useState("");
 
@@ -46,7 +45,7 @@ export default function ImportPage({ params }: PageProps) {
       <Sidebar orgSlug={org_slug} projectSlug={project_slug} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title={`Import — ${env}`} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-auto min-w-0 p-6">
           <button
             onClick={() => router.back()}
             className="mb-6 flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"

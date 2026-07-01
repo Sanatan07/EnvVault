@@ -35,11 +35,21 @@ async function request<T>(
     headers: { ...headers, ...(options.headers as Record<string, string>) },
   });
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
     const error = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(error.detail || "Request failed");
   }
   if (res.status === 204) return undefined as T;
-  return res.json();
+  const data = await res.json();
+  if (data && typeof data === "object" && "results" in data && Array.isArray(data.results)) {
+    if (path.includes("/audit")) {
+      return data as T;
+    }
+    return data.results as T;
+  }
+  return data;
 }
 
 // Auth
@@ -74,19 +84,19 @@ export const orgsApi = {
 
 // Members
 export const membersApi = {
-  list: (orgId: string) => request<Member[]>(`/auth/organisations/${orgId}/members`),
+  list: (orgId: string) => request<Member[]>(`/auth/organisations/${orgId}/members/`),
   invite: (orgId: string, data: { email: string; role: string }) =>
-    request<{ detail: string }>(`/auth/organisations/${orgId}/members`, {
+    request<{ detail: string }>(`/auth/organisations/${orgId}/members/`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
   updateRole: (orgId: string, memberId: string, role: string) =>
-    request<Member>(`/auth/organisations/${orgId}/members/${memberId}`, {
+    request<Member>(`/auth/organisations/${orgId}/members/${memberId}/`, {
       method: "PATCH",
       body: JSON.stringify({ role }),
     }),
   remove: (orgId: string, memberId: string) =>
-    request<void>(`/auth/organisations/${orgId}/members/${memberId}`, { method: "DELETE" }),
+    request<void>(`/auth/organisations/${orgId}/members/${memberId}/`, { method: "DELETE" }),
 };
 
 // Projects
@@ -171,6 +181,8 @@ export const secretsApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  promoteDiff: (projectId: string, sourceEnv: string, targetEnv: string) =>
+    request<any[]>(`/secrets/${projectId}/promote/?source_env=${sourceEnv}&target_env=${targetEnv}`),
 };
 
 // Audit
@@ -193,10 +205,16 @@ export const auditApi = {
 export const billingApi = {
   plans: () => request<BillingPlan[]>("/billing/plans/"),
   usage: (orgId: string) =>
-    request<{ account: { plan: string }; current_period: { secret_reads: number; period_start: string; period_end: string } }>(
-      `/billing/usage/${orgId}/`
-    ),
-  checkout: (data: { org_id: string; success_url: string; cancel_url: string }) =>
+    request<{
+      account: { plan: string; reads_limit: number | null; block_reads_at_limit: boolean };
+      current_period: { secret_reads: number; period_start: string; period_end: string };
+    }>(`/billing/usage/${orgId}/`),
+  updateUsageSettings: (orgId: string, blockReadsAtLimit: boolean) =>
+    request<any>(`/billing/usage/${orgId}/`, {
+      method: "PUT",
+      body: JSON.stringify({ block_reads_at_limit: blockReadsAtLimit }),
+    }),
+  checkout: (data: { org_id: string; plan: string; success_url: string; cancel_url: string }) =>
     request<{ checkout_url: string }>("/billing/checkout/", {
       method: "POST",
       body: JSON.stringify(data),

@@ -54,3 +54,5 @@ FROM_EMAIL = config("FROM_EMAIL", default="notifications@envvault.io")
 SLACK_BOT_TOKEN = config("SLACK_BOT_TOKEN", default="")
 
 CORS_ALLOW_ALL_ORIGINS = True
+AUTH_SERVICE_URL = config("AUTH_SERVICE_URL", default="http://auth-service:8001")
+

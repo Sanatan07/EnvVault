@@ -1,5 +1,5 @@
 from rest_framework.views import exception_handler
-from rest_framework.response import Response
+from rest_framework.exceptions import APIException
 from rest_framework import status
 
 
@@ -10,5 +10,7 @@ def custom_exception_handler(exc, context):
     return response
 
 
-class PlanLimitExceeded(Exception):
-    pass
+class PlanLimitExceeded(APIException):
+    status_code = status.HTTP_402_PAYMENT_REQUIRED
+    default_detail = "Billing plan limit exceeded. Please upgrade your plan."
+    default_code = "payment_required"

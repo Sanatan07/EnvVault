@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
@@ -12,11 +12,11 @@ import { orgsApi } from "@/lib/api";
 import { toast } from "sonner";
 
 interface PageProps {
-  params: Promise<{ org_slug: string }>;
+  params: { org_slug: string };
 }
 
 export default function OrgSettingsPage({ params }: PageProps) {
-  const { org_slug } = use(params);
+  const { org_slug } = params;
   const qc = useQueryClient();
   const { data: orgs } = useQuery({ queryKey: ["organisations"], queryFn: orgsApi.list });
   const org = orgs?.find((o) => o.slug === org_slug);
@@ -36,7 +36,7 @@ export default function OrgSettingsPage({ params }: PageProps) {
       <Sidebar orgSlug={org_slug} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title="Organisation Settings" />
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 max-w-2xl">
+        <main className="flex-1 overflow-auto min-w-0 p-6 space-y-6 max-w-2xl">
           <Card>
             <CardHeader><CardTitle>Organisation Details</CardTitle></CardHeader>
             <CardContent className="space-y-4">

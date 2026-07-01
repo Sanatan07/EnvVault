@@ -20,18 +20,31 @@ class EnvironmentCreateSerializer(serializers.Serializer):
 
 
 class SecretSerializer(serializers.ModelSerializer):
+    needs_rotation = serializers.SerializerMethodField()
+
     class Meta:
         model = Secret
-        fields = ["id", "key", "current_version", "created_at", "updated_at"]
-        read_only_fields = ["id", "current_version", "created_at", "updated_at"]
+        fields = ["id", "key", "current_version", "needs_rotation", "created_at", "updated_at"]
+        read_only_fields = ["id", "current_version", "needs_rotation", "created_at", "updated_at"]
+
+    def get_needs_rotation(self, obj):
+        from datetime import timedelta
+        from django.utils import timezone
+        return obj.updated_at < timezone.now() - timedelta(days=90)
 
 
 class SecretDetailSerializer(serializers.ModelSerializer):
     value = serializers.CharField()
+    needs_rotation = serializers.SerializerMethodField()
 
     class Meta:
         model = Secret
-        fields = ["id", "key", "value", "current_version", "created_at", "updated_at"]
+        fields = ["id", "key", "value", "current_version", "needs_rotation", "created_at", "updated_at"]
+
+    def get_needs_rotation(self, obj):
+        from datetime import timedelta
+        from django.utils import timezone
+        return obj.updated_at < timezone.now() - timedelta(days=90)
 
 
 class SecretCreateSerializer(serializers.Serializer):

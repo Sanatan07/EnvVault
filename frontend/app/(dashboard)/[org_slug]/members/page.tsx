@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, Trash2 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -16,7 +16,7 @@ import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface PageProps {
-  params: Promise<{ org_slug: string }>;
+  params: { org_slug: string };
 }
 
 const ROLE_COLORS: Record<string, "default" | "info" | "success" | "warning" | "danger"> = {
@@ -27,7 +27,7 @@ const ROLE_COLORS: Record<string, "default" | "info" | "success" | "warning" | "
 };
 
 export default function MembersPage({ params }: PageProps) {
-  const { org_slug } = use(params);
+  const { org_slug } = params;
   const qc = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -68,7 +68,7 @@ export default function MembersPage({ params }: PageProps) {
       <Sidebar orgSlug={org_slug} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title="Team Members" />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-auto min-w-0 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold">Members</h2>
@@ -92,7 +92,7 @@ export default function MembersPage({ params }: PageProps) {
             <TableBody>
               {members.map((member) => (
                 <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.user.email}</TableCell>
+                  <TableCell className="font-medium">{member.email}</TableCell>
                   <TableCell>
                     <Badge variant={ROLE_COLORS[member.role] ?? "default"}>{member.role}</Badge>
                   </TableCell>

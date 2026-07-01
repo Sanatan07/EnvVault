@@ -14,7 +14,28 @@ class SecretService:
         return Secret.objects.filter(environment=environment, is_deleted=False).order_by("key")
 
     @staticmethod
+    def check_billing_limit(org_id: str) -> None:
+        try:
+            resp = httpx.get(
+                f"{settings.BILLING_SERVICE_URL}/api/v1/billing/usage/{org_id}/",
+                headers={"X-Internal-Token": settings.INTERNAL_SERVICE_TOKEN},
+                timeout=2,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                account = data.get("account", {})
+                current_period = data.get("current_period", {})
+                block_reads_at_limit = account.get("block_reads_at_limit", False)
+                reads_limit = account.get("reads_limit")
+                secret_reads = current_period.get("secret_reads", 0)
+                if block_reads_at_limit and reads_limit is not None and secret_reads >= reads_limit:
+                    raise PlanLimitExceeded()
+        except httpx.RequestError:
+            pass
+
+    @staticmethod
     def get_secret_plaintext(secret: Secret, org_id: str) -> str:
+        SecretService.check_billing_limit(str(org_id))
         key = get_org_key(str(org_id))
         plaintext = decrypt(secret.encrypted_value, secret.iv, key)
         SecretService._increment_billing(str(org_id))
@@ -133,3 +154,66 @@ class SecretService:
             )
         except Exception:
             pass
+
+    @staticmethod
+    def compare_secrets(source_env: Environment, target_env: Environment, org_id: str) -> list:
+        enc_key = get_org_key(str(org_id))
+        source_secrets = {s.key: s for s in Secret.objects.filter(environment=source_env, is_deleted=False)}
+        target_secrets = {s.key: s for s in Secret.objects.filter(environment=target_env, is_deleted=False)}
+        
+        all_keys = sorted(list(set(source_secrets.keys()) | set(target_secrets.keys())))
+        diff = []
+        for k in all_keys:
+            s_sec = source_secrets.get(k)
+            t_sec = target_secrets.get(k)
+            if s_sec and not t_sec:
+                s_val = decrypt(s_sec.encrypted_value, s_sec.iv, enc_key)
+                diff.append({
+                    "key": k,
+                    "status": "added",
+                    "source_value": s_val,
+                    "target_value": None,
+                })
+            elif not s_sec and t_sec:
+                t_val = decrypt(t_sec.encrypted_value, t_sec.iv, enc_key)
+                diff.append({
+                    "key": k,
+                    "status": "deleted",
+                    "source_value": None,
+                    "target_value": t_val,
+                })
+            else:
+                s_val = decrypt(s_sec.encrypted_value, s_sec.iv, enc_key)
+                t_val = decrypt(t_sec.encrypted_value, t_sec.iv, enc_key)
+                status_str = "unchanged" if s_val == t_val else "modified"
+                diff.append({
+                    "key": k,
+                    "status": status_str,
+                    "source_value": s_val,
+                    "target_value": t_val,
+                })
+        return diff
+
+    @staticmethod
+    def promote_secrets(source_env: Environment, target_env: Environment, created_by_id, org_id: str) -> int:
+        enc_key = get_org_key(str(org_id))
+        source_secrets = Secret.objects.filter(environment=source_env, is_deleted=False)
+        promoted_count = 0
+        for s_sec in source_secrets:
+            s_val = decrypt(s_sec.encrypted_value, s_sec.iv, enc_key)
+            try:
+                t_sec = Secret.objects.get(environment=target_env, key=s_sec.key, is_deleted=False)
+                t_val = decrypt(t_sec.encrypted_value, t_sec.iv, enc_key)
+                if s_val != t_val:
+                    SecretService.update_secret(t_sec, s_val, created_by_id, org_id)
+                    promoted_count += 1
+            except Secret.DoesNotExist:
+                t_sec_deleted = Secret.objects.filter(environment=target_env, key=s_sec.key, is_deleted=True).first()
+                if t_sec_deleted:
+                    t_sec_deleted.is_deleted = False
+                    t_sec_deleted.save()
+                    SecretService.update_secret(t_sec_deleted, s_val, created_by_id, org_id)
+                else:
+                    SecretService.create_secret(target_env, s_sec.key, s_val, created_by_id, org_id)
+                promoted_count += 1
+        return promoted_count

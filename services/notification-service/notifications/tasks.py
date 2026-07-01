@@ -96,3 +96,53 @@ def _send_email(to_email: str, subject: str, body: str):
         sg.send(message)
     except Exception:
         pass
+
+
+@shared_task
+def send_billing_alert(org_id: str, event_type: str, usage: int, limit: int):
+    from .models import NotificationSettings
+    try:
+        settings_obj = NotificationSettings.objects.get(org_id=org_id)
+    except NotificationSettings.DoesNotExist:
+        settings_obj = NotificationSettings.objects.create(org_id=org_id)
+
+    owner_email = None
+    try:
+        import httpx
+        from django.conf import settings as django_settings
+        resp = httpx.get(
+            f"{django_settings.AUTH_SERVICE_URL}/api/v1/auth/organisations/{org_id}/members",
+            headers={"X-Internal-Token": django_settings.INTERNAL_SERVICE_TOKEN},
+            timeout=3
+        )
+        if resp.status_code == 200:
+            for member in resp.json():
+                if member.get("role") == "owner":
+                    owner_email = member.get("user", {}).get("email")
+                    break
+    except Exception:
+        pass
+
+    percent = "80%" if event_type == "limit_80" else "100%"
+    message = f"[EnvVault] Overage warning: Organisation has consumed {usage} / {limit} ({percent}) of secret reads limit."
+
+    if settings_obj.slack_webhook_url:
+        _send_slack(settings_obj.slack_webhook_url, message)
+
+    if settings_obj.custom_webhook_url:
+        _deliver_webhook(settings_obj.custom_webhook_url, {
+            "event": "billing_overage",
+            "org_id": org_id,
+            "event_type": event_type,
+            "usage": usage,
+            "limit": limit
+        })
+
+    if owner_email:
+        _send_email(
+            to_email=owner_email,
+            subject=f"[EnvVault] Overage warning ({percent} read limit reached)",
+            body=f"Your EnvVault organisation has used {usage} out of your plan's {limit} monthly read limit.\n"
+                 f"Please visit the billing dashboard to upgrade your plan."
+        )
+

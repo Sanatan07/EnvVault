@@ -81,6 +81,12 @@ class InternalValidateTokenView(APIView):
             from rest_framework_simplejwt.tokens import AccessToken
             token = AccessToken(token_str)
             user = User.objects.get(id=token["user_id"])
-            return Response(UserSerializer(user).data)
+            data = UserSerializer(user).data
+            from organisations.models import Member
+            membership = Member.objects.filter(user=user).first()
+            if membership:
+                data["org_id"] = str(membership.organisation_id)
+                data["role"] = membership.role
+            return Response(data)
         except Exception:
             return Response({"detail": "Invalid token."}, status=status.HTTP_401_UNAUTHORIZED)

@@ -4,4 +4,4 @@ DEBUG = True
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email backend is configured in base.py via decouple config to allow environment-driven override.

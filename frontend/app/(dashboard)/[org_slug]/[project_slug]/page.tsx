@@ -1,5 +1,4 @@
 "use client";
-import { use } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -9,11 +8,11 @@ import { Topbar } from "@/components/layout/Topbar";
 import { KeyRound } from "lucide-react";
 
 interface PageProps {
-  params: Promise<{ org_slug: string; project_slug: string }>;
+  params: { org_slug: string; project_slug: string };
 }
 
 export default function ProjectOverviewPage({ params }: PageProps) {
-  const { org_slug, project_slug } = use(params);
+  const { org_slug, project_slug } = params;
   const router = useRouter();
 
   const { data: orgs } = useQuery({ queryKey: ["organisations"], queryFn: orgsApi.list });

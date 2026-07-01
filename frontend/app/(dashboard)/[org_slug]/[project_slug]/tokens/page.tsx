@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Copy, CheckCircle2 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -15,11 +15,11 @@ import { formatDate, formatRelativeDate } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface PageProps {
-  params: Promise<{ org_slug: string; project_slug: string }>;
+  params: { org_slug: string; project_slug: string };
 }
 
 export default function TokensPage({ params }: PageProps) {
-  const { org_slug, project_slug } = use(params);
+  const { org_slug, project_slug } = params;
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [newToken, setNewToken] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function TokensPage({ params }: PageProps) {
       <Sidebar orgSlug={org_slug} projectSlug={project_slug} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title={`${project?.name} — API Tokens`} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-auto min-w-0 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold">API Tokens</h2>

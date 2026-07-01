@@ -83,4 +83,9 @@ class InternalValidateAPITokenView(generics.GenericAPIView):
         token.last_used_at = timezone.now()
         token.save(update_fields=["last_used_at"])
 
-        return Response(APITokenSerializer(token).data)
+        data = APITokenSerializer(token).data
+        from organisations.models import Project
+        project = Project.objects.filter(id=token.project_id).first()
+        if project:
+            data["org_id"] = str(project.organisation_id)
+        return Response(data)

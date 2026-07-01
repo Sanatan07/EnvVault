@@ -1,5 +1,4 @@
 "use client";
-import { use } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Plus, FolderOpen } from "lucide-react";
@@ -16,11 +15,11 @@ import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface PageProps {
-  params: Promise<{ org_slug: string }>;
+  params: { org_slug: string };
 }
 
 export default function OrgOverviewPage({ params }: PageProps) {
-  const { org_slug } = use(params);
+  const { org_slug } = params;
   const router = useRouter();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -53,7 +52,7 @@ export default function OrgOverviewPage({ params }: PageProps) {
       <Sidebar orgSlug={org_slug} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title={org?.name} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-auto min-w-0 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold">Projects</h2>

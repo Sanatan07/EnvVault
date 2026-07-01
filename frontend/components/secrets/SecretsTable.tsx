@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Eye, EyeOff, Copy, Pencil, Trash2, History, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Copy, Pencil, Trash2, History, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -85,9 +85,17 @@ export function SecretsTable({ secrets, projectId, env }: SecretsTableProps) {
           {secrets.map((secret) => (
             <TableRow key={secret.id}>
               <TableCell>
-                <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono text-gray-700">
-                  {secret.key}
-                </code>
+                <div className="flex items-center gap-2">
+                  <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono text-gray-700">
+                    {secret.key}
+                  </code>
+                  {secret.needs_rotation && (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5" title="This secret is older than 90 days and should be rotated.">
+                      <AlertTriangle className="h-3 w-3" />
+                      Needs Rotation
+                    </span>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2 font-mono text-xs">

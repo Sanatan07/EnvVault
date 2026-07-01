@@ -12,8 +12,12 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
         try {
+          const apiBase = process.env.INTERNAL_API_URL
+            ? `${process.env.INTERNAL_API_URL}/api/v1`
+            : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1");
+
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/auth/login`,
+            `${apiBase}/auth/login`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -23,7 +27,7 @@ export const authOptions: NextAuthOptions = {
           if (!res.ok) return null;
           const data = await res.json();
           const userRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/auth/me`,
+            `${apiBase}/auth/me`,
             { headers: { Authorization: `Bearer ${data.access}` } }
           );
           if (!userRes.ok) return null;

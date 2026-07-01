@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api";
+import { toast } from "sonner";
 
 export function usePlans() {
   return useQuery({
@@ -24,6 +25,9 @@ export function useCheckout() {
     onSuccess: ({ checkout_url }) => {
       window.location.href = checkout_url;
     },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to initiate checkout");
+    },
   });
 }
 
@@ -32,6 +36,9 @@ export function useBillingPortal() {
     mutationFn: billingApi.portal,
     onSuccess: ({ portal_url }) => {
       window.location.href = portal_url;
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "No active billing account. Please subscribe to a plan first.");
     },
   });
 }

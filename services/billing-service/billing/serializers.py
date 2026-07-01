@@ -7,7 +7,7 @@ class BillingAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BillingAccount
-        fields = ["id", "org_id", "plan", "reads_limit", "billing_period_start", "billing_period_end"]
+        fields = ["id", "org_id", "plan", "reads_limit", "block_reads_at_limit", "billing_period_start", "billing_period_end"]
 
     def get_reads_limit(self, obj):
         return obj.get_reads_limit()

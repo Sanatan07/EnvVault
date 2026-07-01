@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
@@ -10,11 +10,11 @@ import { orgsApi } from "@/lib/api";
 import { useAuditLog } from "@/hooks/useAuditLog";
 
 interface PageProps {
-  params: Promise<{ org_slug: string }>;
+  params: { org_slug: string };
 }
 
 export default function AuditPage({ params }: PageProps) {
-  const { org_slug } = use(params);
+  const { org_slug } = params;
   const [filters, setFilters] = useState({ action: "", env: "", from: "", to: "" });
 
   const { data: orgs } = useQuery({ queryKey: ["organisations"], queryFn: orgsApi.list });
@@ -35,7 +35,7 @@ export default function AuditPage({ params }: PageProps) {
       <Sidebar orgSlug={org_slug} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar title="Audit Log" />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-auto min-w-0 p-6">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-xl font-semibold">Audit Log</h2>
             <AuditExportButton params={queryParams} />
