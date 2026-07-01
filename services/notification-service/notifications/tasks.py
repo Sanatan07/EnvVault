@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from celery import shared_task
 
 
@@ -40,6 +41,7 @@ def send_new_ip_alert(org_id: str, actor_email: str, ip_address: str):
 
 @shared_task
 def send_expiry_reminder(org_id: str, secret_key: str, days_until_expiry: int, owner_email: str):
+    # pyrefly: ignore [missing-import]
     from django.conf import settings as django_settings
     _send_email(
         to_email=owner_email,
@@ -64,6 +66,7 @@ def send_invoice_email(to_email: str, org_name: str, amount: str, period: str):
 
 
 def _send_slack(webhook_url: str, message: str):
+    # pyrefly: ignore [missing-import]
     import httpx
     try:
         httpx.post(webhook_url, json={"text": message}, timeout=5)
@@ -72,6 +75,7 @@ def _send_slack(webhook_url: str, message: str):
 
 
 def _deliver_webhook(url: str, payload: dict):
+    # pyrefly: ignore [missing-import]
     import httpx
     try:
         httpx.post(url, json=payload, timeout=5)
@@ -80,11 +84,14 @@ def _deliver_webhook(url: str, payload: dict):
 
 
 def _send_email(to_email: str, subject: str, body: str):
+    # pyrefly: ignore [missing-import]
     from django.conf import settings as django_settings
     if not django_settings.SENDGRID_API_KEY:
         return
     try:
+        # pyrefly: ignore [missing-import]
         import sendgrid
+        # pyrefly: ignore [missing-import]
         from sendgrid.helpers.mail import Mail
         sg = sendgrid.SendGridAPIClient(api_key=django_settings.SENDGRID_API_KEY)
         message = Mail(
@@ -108,7 +115,9 @@ def send_billing_alert(org_id: str, event_type: str, usage: int, limit: int):
 
     owner_email = None
     try:
+        # pyrefly: ignore [missing-import]
         import httpx
+        # pyrefly: ignore [missing-import]
         from django.conf import settings as django_settings
         resp = httpx.get(
             f"{django_settings.AUTH_SERVICE_URL}/api/v1/auth/organisations/{org_id}/members",
