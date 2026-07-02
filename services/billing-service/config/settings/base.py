@@ -1,6 +1,8 @@
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import dj_database_url
+# pyrefly: ignore [missing-import]
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent

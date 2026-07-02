@@ -1,0 +1,10 @@
+[tool.pyrefly]
+python-interpreter-path = ".venv/Scripts/python.exe"
+
+search_path = [
+    "services/auth-service",
+    "services/billing-service",
+    "services/secrets-service",
+    "services/audit-service",
+    "services/notification-service"
+]

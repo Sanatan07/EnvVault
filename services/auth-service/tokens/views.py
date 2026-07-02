@@ -1,7 +1,9 @@
 import hashlib
 import secrets as secrets_module
 
+# pyrefly: ignore [missing-import]
 from rest_framework import generics, status
+# pyrefly: ignore [missing-import]
 from rest_framework.response import Response
 
 from organisations.models import Project
@@ -56,11 +58,14 @@ class ProjectTokenDestroyView(generics.DestroyAPIView):
 class InternalValidateAPITokenView(generics.GenericAPIView):
     """Used by other services to validate an API token."""
 
+    # pyrefly: ignore [missing-import]
     from rest_framework.permissions import AllowAny
     permission_classes = [AllowAny]
 
     def post(self, request):
+        # pyrefly: ignore [missing-import]
         from django.conf import settings
+        # pyrefly: ignore [missing-import]
         from django.utils import timezone
 
         internal_token = request.headers.get("X-Internal-Token")

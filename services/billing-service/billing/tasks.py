@@ -1,10 +1,14 @@
+# pyrefly: ignore [missing-import]
 from celery import shared_task
+# pyrefly: ignore [missing-import]
 from django.utils import timezone
 from datetime import timedelta
 
 
 def trigger_billing_alert(org_id: str, event_type: str, usage: int, limit: int):
+    # pyrefly: ignore [missing-import]
     import httpx
+    # pyrefly: ignore [missing-import]
     from django.conf import settings
     try:
         httpx.post(
@@ -60,7 +64,9 @@ def increment_read_counter(org_id: str, count: int = 1):
 @shared_task
 def sync_usage_to_stripe():
     """Called by Celery Beat at period end to report usage to Stripe."""
+    # pyrefly: ignore [missing-import]
     import stripe
+    # pyrefly: ignore [missing-import]
     from django.conf import settings
     from .models import BillingAccount, UsageCounter
 

@@ -1,7 +1,12 @@
+# pyrefly: ignore [missing-import]
 from rest_framework import generics, permissions, status
+# pyrefly: ignore [missing-import]
 from rest_framework.response import Response
+# pyrefly: ignore [missing-import]
 from rest_framework.views import APIView
+# pyrefly: ignore [missing-import]
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+# pyrefly: ignore [missing-import]
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
@@ -67,6 +72,7 @@ class InternalValidateTokenView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        # pyrefly: ignore [missing-import]
         from django.conf import settings
 
         internal_token = request.headers.get("X-Internal-Token")
@@ -78,6 +84,7 @@ class InternalValidateTokenView(APIView):
             return Response({"detail": "token required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            # pyrefly: ignore [missing-import]
             from rest_framework_simplejwt.tokens import AccessToken
             token = AccessToken(token_str)
             user = User.objects.get(id=token["user_id"])

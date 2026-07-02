@@ -1,4 +1,4 @@
-# pyrefly: ignore [missing-import]
+# pyrefly: ignore [missing-import, untyped-import]
 from django.conf import settings
 # pyrefly: ignore [missing-import]
 from rest_framework import status
@@ -18,10 +18,12 @@ def require_internal(request):
 
 class NotificationSettingsView(APIView):
     def get(self, request, org_id):
+        # pyrefly: ignore [missing-attribute]
         obj, _ = NotificationSettings.objects.get_or_create(org_id=org_id)
         return Response(NotificationSettingsSerializer(obj).data)
 
     def put(self, request, org_id):
+        # pyrefly: ignore [missing-attribute]
         obj, _ = NotificationSettings.objects.get_or_create(org_id=org_id)
         serializer = NotificationSettingsSerializer(obj, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -34,6 +36,7 @@ class TestWebhookView(APIView):
         url = request.data.get("url")
         if not url:
             return Response({"detail": "url required"}, status=status.HTTP_400_BAD_REQUEST)
+        # pyrefly: ignore [missing-attribute]
         deliver_webhook.delay(url, {"event": "test", "message": "EnvVault webhook test"})
         return Response({"detail": "Test webhook queued."})
 
@@ -48,12 +51,15 @@ class InternalTriggerView(APIView):
 
         if event_type == "secret_change":
             from .tasks import send_secret_change_alert
+            # pyrefly: ignore [missing-attribute]
             send_secret_change_alert.delay(**payload)
         elif event_type == "new_ip":
             from .tasks import send_new_ip_alert
+            # pyrefly: ignore [missing-attribute]
             send_new_ip_alert.delay(**payload)
         elif event_type == "expiry_reminder":
             from .tasks import send_expiry_reminder
+            # pyrefly: ignore [missing-attribute]
             send_expiry_reminder.delay(**payload)
         elif event_type == "invoice":
             from .tasks import send_invoice_email
