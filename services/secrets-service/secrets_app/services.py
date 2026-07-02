@@ -1,10 +1,14 @@
 import io
 
+# pyrefly: ignore [missing-import]
 import httpx
+# pyrefly: ignore [missing-import]
 from django.conf import settings
 
 from .models import Environment, Secret, SecretVersion
+# pyrefly: ignore [missing-import]
 from utils.encryption import encrypt, decrypt, get_org_key
+# pyrefly: ignore [missing-module-attribute]
 from utils.exceptions import PlanLimitExceeded
 
 
@@ -35,15 +39,15 @@ class SecretService:
 
     @staticmethod
     def get_secret_plaintext(secret: Secret, org_id: str) -> str:
-        SecretService.check_billing_limit(str(org_id))
-        key = get_org_key(str(org_id))
+        SecretService.check_billing_limit(org_id)
+        key = get_org_key(org_id)
         plaintext = decrypt(secret.encrypted_value, secret.iv, key)
-        SecretService._increment_billing(str(org_id))
+        SecretService._increment_billing(org_id)
         return plaintext
 
     @staticmethod
     def create_secret(environment: Environment, key: str, value: str, created_by_id, org_id: str) -> Secret:
-        enc_key = get_org_key(str(org_id))
+        enc_key = get_org_key(org_id)
         encrypted_value, iv = encrypt(value, enc_key)
         secret = Secret.objects.create(
             environment=environment,
@@ -63,7 +67,7 @@ class SecretService:
 
     @staticmethod
     def update_secret(secret: Secret, value: str, updated_by_id, org_id: str) -> Secret:
-        enc_key = get_org_key(str(org_id))
+        enc_key = get_org_key(org_id)
         encrypted_value, iv = encrypt(value, enc_key)
         secret.current_version += 1
         secret.encrypted_value = encrypted_value
@@ -124,7 +128,7 @@ class SecretService:
     @staticmethod
     def export_env_file(environment: Environment, org_id: str) -> str:
         secrets = SecretService.list_secrets(environment)
-        enc_key = get_org_key(str(org_id))
+        enc_key = get_org_key(org_id)
         lines = [f"# EnvVault export — {environment.name}\n"]
         for secret in secrets:
             value = decrypt(secret.encrypted_value, secret.iv, enc_key)
@@ -157,7 +161,7 @@ class SecretService:
 
     @staticmethod
     def compare_secrets(source_env: Environment, target_env: Environment, org_id: str) -> list:
-        enc_key = get_org_key(str(org_id))
+        enc_key = get_org_key(org_id)
         source_secrets = {s.key: s for s in Secret.objects.filter(environment=source_env, is_deleted=False)}
         target_secrets = {s.key: s for s in Secret.objects.filter(environment=target_env, is_deleted=False)}
         
@@ -183,7 +187,9 @@ class SecretService:
                     "target_value": t_val,
                 })
             else:
+                # pyrefly: ignore [missing-attribute]
                 s_val = decrypt(s_sec.encrypted_value, s_sec.iv, enc_key)
+                # pyrefly: ignore [missing-attribute]
                 t_val = decrypt(t_sec.encrypted_value, t_sec.iv, enc_key)
                 status_str = "unchanged" if s_val == t_val else "modified"
                 diff.append({
@@ -196,7 +202,7 @@ class SecretService:
 
     @staticmethod
     def promote_secrets(source_env: Environment, target_env: Environment, created_by_id, org_id: str) -> int:
-        enc_key = get_org_key(str(org_id))
+        enc_key = get_org_key(org_id)
         source_secrets = Secret.objects.filter(environment=source_env, is_deleted=False)
         promoted_count = 0
         for s_sec in source_secrets:

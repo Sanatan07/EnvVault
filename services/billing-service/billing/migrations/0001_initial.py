@@ -1,5 +1,6 @@
 import uuid
 # pyright: ignore [reportMissingImports]
+# pyrefly: ignore [missing-import]
 from django.db import migrations, models
 
 class Migration(migrations.Migration):

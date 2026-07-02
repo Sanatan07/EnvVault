@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from rest_framework import serializers
 from .models import Environment, Secret, SecretVersion
 
@@ -29,6 +30,7 @@ class SecretSerializer(serializers.ModelSerializer):
 
     def get_needs_rotation(self, obj):
         from datetime import timedelta
+        # pyrefly: ignore [missing-import]
         from django.utils import timezone
         return obj.updated_at < timezone.now() - timedelta(days=90)
 
@@ -43,6 +45,7 @@ class SecretDetailSerializer(serializers.ModelSerializer):
 
     def get_needs_rotation(self, obj):
         from datetime import timedelta
+        # pyrefly: ignore [missing-import]
         from django.utils import timezone
         return obj.updated_at < timezone.now() - timedelta(days=90)
 
