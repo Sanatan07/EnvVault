@@ -105,9 +105,39 @@ class CheckoutView(APIView):
             account.stripe_customer_id = customer.id
             account.save(update_fields=["stripe_customer_id"])
 
+        plan_name = data["plan"]
+        plan_prices = {
+            "starter": 900,
+            "growth": 2900,
+            "enterprise": 9900,
+        }
+        price_cents = plan_prices.get(plan_name, 900)
+
         session = stripe.checkout.Session.create(
             customer=account.stripe_customer_id,
             mode="subscription",
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": f"EnvVault {plan_name.capitalize()} Plan",
+                        "description": f"Metered billing subscription for EnvVault {plan_name} pack",
+                    },
+                    "unit_amount": price_cents,
+                    "recurring": {
+                        "interval": "month",
+                    },
+                },
+                "quantity": 1,
+            }],
+            subscription_data={
+                "metadata": {
+                    "plan": plan_name,
+                }
+            },
+            metadata={
+                "plan": plan_name,
+            },
             success_url=data["success_url"],
             cancel_url=data["cancel_url"],
         )
@@ -142,7 +172,18 @@ class StripeWebhookView(APIView):
         except stripe.error.SignatureVerificationError:
             return Response({"detail": "Invalid signature."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if event["type"] == "customer.subscription.updated":
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            customer_id = session.get("customer")
+            subscription_id = session.get("subscription")
+            plan = session.get("metadata", {}).get("plan", "starter")
+            account = BillingAccount.objects.filter(stripe_customer_id=customer_id).first()
+            if account:
+                account.stripe_subscription_id = subscription_id or ""
+                account.plan = plan
+                account.save(update_fields=["stripe_subscription_id", "plan"])
+
+        elif event["type"] == "customer.subscription.updated":
             sub = event["data"]["object"]
             account = BillingAccount.objects.filter(stripe_subscription_id=sub["id"]).first()
             if account:
